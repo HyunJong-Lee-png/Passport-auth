@@ -8,12 +8,15 @@ const router = express.Router();
 
 router.get('/', (req, res) => {
   console.log('req.user:', req.user);
+  console.log('req.session',req.session)
   res.render('home');
 })
 
 //로그인/인증 구현
 router.route('/login')
   .get((req, res, next) => {
+    console.log('req.user:', req.user);
+    console.log('req.session',req.session)
     res.render('login');
   })
   .post((req, res) => {
@@ -54,43 +57,27 @@ passport.use(new LocalStrategy({
 //회원가입 구현
 router.route('/signup')
   .get((req, res) => {
+    console.log('req.user:', req.user);
+    console.log('req.session',req.session)
     res.render('signup');
   })
-  .post((req, res) => {
-    passport.authenticate('signup', {
-      successRedirect: '/',
-      failureRedirect: '/signup',
-    })(req, res);
-    console.log('passport.authenticate(signup):', req.session)
-  });
+  .post((req, res, next) => {
+   
+    db.get('SELECT * FROM users WHERE username = ?', [req.body.lalala], function (err, row) {
+      if (err) return next(err);
+      if (row) return res.redirect('/signup');
 
-passport.use('signup', new LocalStrategy({
-  usernameField: 'lalala',
-  passwordField: 'lololo',
-}, function (username, password, done) {
-  console.log('signup제발되라')
-  db.get('SELECT * FROM users WHERE username = ?', [username], function (err, row) {
-    if (err) { return done(err); }
-    if (row) {
-      return done(null, false, { message: 'Username already taken' });
-    }
-
-    const salt = crypto.randomBytes(16);
-    db.run('INSERT INTO users (username, hashed_password, salt) VALUES (?,?,?)', [
-      username,
-      crypto.pbkdf2Sync(password, salt, 310000, 32, 'sha256'),
-      salt
-    ], function (err) {
-      if (err) return done(err);
-      const user = {
-        id: this.lastID,
-        username,
-      };
-      console.log('signup전략');
-      return done(null, user);
-    });
+      const salt = crypto.randomBytes(16);
+      db.run('INSERT INTO users (username, hashed_password, salt) VALUES (?,?,?)', [
+        req.body.lalala,
+        crypto.pbkdf2Sync(req.body.lololo, salt, 310000, 32, 'sha256'),
+        salt
+      ], function (err) {
+        if (err) return next(err);
+        res.redirect('/')
+      })
+    })
   });
-}));
 
 passport.serializeUser(function (user, done) {
   //이때 req.session에 req.session.passport.user에 id를 저장한다.
